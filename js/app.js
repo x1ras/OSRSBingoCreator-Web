@@ -1,8 +1,12 @@
+/**
+ * Main application entry point
+ */
 const app = Vue.createApp({
   template: `
     <div class="app-container">
       <header class="app-header">
         <h1>OSRS Bingo Creator</h1>
+        <p>Create, save, and share Old School RuneScape bingo boards</p>
       </header>
       
       <main>
@@ -21,6 +25,7 @@ const app = Vue.createApp({
   }
 });
 
+// Mount the app when the DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
   app.mount('#app');
 });
