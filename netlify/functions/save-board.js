@@ -49,7 +49,7 @@ exports.handler = async (event) => {
                 statusCode: 200,
                 body: JSON.stringify({
                     message: "Board saved successfully",
-                    code
+                    code: shortCode
                 })
             };
         } catch (error) {

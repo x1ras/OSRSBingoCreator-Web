@@ -935,13 +935,16 @@ const BingoBoard = {
                     throw new Error('API request failed');
                 }
 
+                const data = await response.json();
+                console.log("API response:", data);
+
                 return shortCode;
             } catch (error) {
                 console.error("API error:", error);
                 console.log("Falling back to localStorage");
 
                 localStorage.setItem('bingoboard_' + shortCode, JSON.stringify(boardState));
-                return shortCode;
+                return String(shortCode);
             }
         },
 
