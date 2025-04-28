@@ -1,0 +1,24 @@
+{
+  "name": "osrsbingocreator-web",
+  "version": "1.0.0",
+  "description": "A webapp version of the OSRS Bingo Creator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/x1ras/OSRSBingoCreator-Web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/x1ras/OSRSBingoCreator-Web/issues"
+  },
+  "homepage": "https://github.com/x1ras/OSRSBingoCreator-Web#readme",
+  "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "dotenv": "^16.5.0"
+  }
+}

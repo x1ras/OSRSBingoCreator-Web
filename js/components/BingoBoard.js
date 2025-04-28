@@ -7,10 +7,33 @@ const BingoBoard = {
           <input type="number" id="board-size" v-model.number="boardSize" min="3" max="15" class="size-input">
           <button class="btn create-btn" @click="createBoard">Create Board</button>
         </div>
+        <div class="board-name-control">
+          <label for="board-name">Board Name:</label>
+          <input type="text" id="board-name" v-model="boardName" placeholder="Enter board name" class="name-input">
+        </div>
+        <!-- Password Protection Options -->
+        <div class="password-controls">
+          <div class="password-option">
+            <div class="option-label">
+              <input type="checkbox" id="enable-password" v-model="usePassword">
+              <label for="enable-password">Password protect this board</label>
+            </div>
+            <input v-if="usePassword" type="password" v-model="boardPassword" placeholder="Set board password" class="password-input">
+          </div>
+          
+          <div v-if="usePassword" class="password-option protection-options">
+            <div class="option-label">
+              <input type="checkbox" id="admin-completion" v-model="adminOnlyCompletion">
+              <label for="admin-completion">Admin only tile completion</label>
+              <div class="option-help">Players will need this password to mark tiles as complete</div>
+            </div>
+          </div>
+        </div>
         <div class="board-actions">
           <button class="btn" @click="clearBoard">Clear Board</button>
           <button class="btn" @click="saveBoard">Save Board</button>
           <button class="btn" @click="loadBoard">Load Board</button>
+          <button class="btn" @click="showBoardCode">Generate Code</button>
         </div>
       </div>
       
@@ -223,6 +246,10 @@ const BingoBoard = {
 
     data() {
         return {
+            boardName: "Untitled Board",
+            boardPassword: "",
+            usePassword: false,
+            adminOnlyCompletion: false,
             boardSize: 5,
             boardData: null,
             rowBonuses: [],
@@ -850,7 +877,122 @@ const BingoBoard = {
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = error => reject(error);
             });
+        },
+
+        generateBoardCode() {
+            if (!this.boardData) {
+                alert("Create a board first!");
+                return null;
+            }
+
+            const boardState = {
+                boardName: this.boardName,
+                tiles: this.boardData,
+                rowBonuses: this.rowBonuses,
+                columnBonuses: this.columnBonuses,
+                rows: this.boardSize,
+                columns: this.boardSize
+            };
+
+            return this.storeAndGetShortCode(boardState);
+        },
+
+        async storeAndGetShortCode(boardState) {
+            boardState.passwordProtected = this.usePassword;
+
+            if (this.usePassword && this.boardPassword) {
+                const passwordHash = this.hashPassword(this.boardPassword);
+                boardState.passwordHash = passwordHash;
+
+                boardState.adminOnlyCompletion = this.adminOnlyCompletion;
+            } else {
+                boardState.adminOnlyCompletion = false;
+            }
+
+            const generateId = () => {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                for (let i = 0; i < 12; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            };
+
+            const timestamp = Date.now().toString(36);
+            const shortCode = generateId() + timestamp.slice(-6);
+
+            try {
+                const response = await fetch('/api/save-board', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: shortCode,
+                        boardData: boardState
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+
+                return shortCode;
+            } catch (error) {
+                console.error("API error:", error);
+                console.log("Falling back to localStorage");
+
+                localStorage.setItem('bingoboard_' + shortCode, JSON.stringify(boardState));
+                return shortCode;
+            }
+        },
+
+
+        showBoardCode() {
+            const code = this.generateBoardCode();
+            if (code) {
+                const modalDiv = document.createElement('div');
+                modalDiv.className = 'modal';
+                modalDiv.style.display = 'block';
+                
+                modalDiv.innerHTML = `
+                    <div class="modal-content code-modal">
+                        <span class="modal-close">&times;</span>
+                        <h2>Board Code</h2>
+                        <p>Share this code with players:</p>
+                        <div class="code-display-container">
+                            <input type="text" value="${code}" class="code-display" readonly>
+                            <button class="btn copy-btn">Copy</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modalDiv);
+                
+                const closeBtn = modalDiv.querySelector('.modal-close');
+                closeBtn.addEventListener('click', () => {
+                    document.body.removeChild(modalDiv);
+                });
+                
+                const copyBtn = modalDiv.querySelector('.copy-btn');
+                const codeDisplay = modalDiv.querySelector('.code-display');
+                copyBtn.addEventListener('click', () => {
+                    codeDisplay.select();
+                    document.execCommand('copy');
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = 'Copy';
+                    }, 2000);
+                });
+            }
+        },
+        hashPassword(password) {
+            let hash = 0;
+            if (password.length === 0) return hash;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString();
         }
     }
-
 }
