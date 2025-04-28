@@ -879,7 +879,7 @@ const BingoBoard = {
             });
         },
 
-        generateBoardCode() {
+        async generateBoardCode() {
             if (!this.boardData) {
                 alert("Create a board first!");
                 return null;
@@ -894,7 +894,7 @@ const BingoBoard = {
                 columns: this.boardSize
             };
 
-            return this.storeAndGetShortCode(boardState);
+            return await this.storeAndGetShortCode(boardState);
         },
 
         async storeAndGetShortCode(boardState) {
@@ -945,45 +945,50 @@ const BingoBoard = {
             }
         },
 
+        async showBoardCode() {
+            try {
+                const code = await this.generateBoardCode();
+                if (code) {
+                    const modalDiv = document.createElement('div');
+                    modalDiv.className = 'modal';
+                    modalDiv.style.display = 'block';
 
-        showBoardCode() {
-            const code = this.generateBoardCode();
-            if (code) {
-                const modalDiv = document.createElement('div');
-                modalDiv.className = 'modal';
-                modalDiv.style.display = 'block';
-                
-                modalDiv.innerHTML = `
-                    <div class="modal-content code-modal">
-                        <span class="modal-close">&times;</span>
-                        <h2>Board Code</h2>
-                        <p>Share this code with players:</p>
-                        <div class="code-display-container">
-                            <input type="text" value="${code}" class="code-display" readonly>
-                            <button class="btn copy-btn">Copy</button>
-                        </div>
+                    modalDiv.innerHTML = `
+                <div class="modal-content code-modal">
+                    <span class="modal-close">&times;</span>
+                    <h2>Board Code</h2>
+                    <p>Share this code with players:</p>
+                    <div class="code-display-container">
+                        <input type="text" value="${code}" class="code-display" readonly>
+                        <button class="btn copy-btn">Copy</button>
                     </div>
-                `;
-                
-                document.body.appendChild(modalDiv);
-                
-                const closeBtn = modalDiv.querySelector('.modal-close');
-                closeBtn.addEventListener('click', () => {
-                    document.body.removeChild(modalDiv);
-                });
-                
-                const copyBtn = modalDiv.querySelector('.copy-btn');
-                const codeDisplay = modalDiv.querySelector('.code-display');
-                copyBtn.addEventListener('click', () => {
-                    codeDisplay.select();
-                    document.execCommand('copy');
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => {
-                        copyBtn.textContent = 'Copy';
-                    }, 2000);
-                });
+                </div>
+            `;
+
+                    document.body.appendChild(modalDiv);
+
+                    const closeBtn = modalDiv.querySelector('.modal-close');
+                    closeBtn.addEventListener('click', () => {
+                        document.body.removeChild(modalDiv);
+                    });
+
+                    const copyBtn = modalDiv.querySelector('.copy-btn');
+                    const codeDisplay = modalDiv.querySelector('.code-display');
+                    copyBtn.addEventListener('click', () => {
+                        codeDisplay.select();
+                        document.execCommand('copy');
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                        }, 2000);
+                    });
+                }
+            } catch (error) {
+                console.error("Error generating code:", error);
+                alert("There was an error generating the board code. Please try again.");
             }
         },
+        
         hashPassword(password) {
             let hash = 0;
             if (password.length === 0) return hash;
