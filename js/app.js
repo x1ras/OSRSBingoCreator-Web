@@ -1,6 +1,3 @@
-/**
- * Main application entry point
- */
 const app = Vue.createApp({
   template: `
     <div class="app-container">
@@ -25,7 +22,6 @@ const app = Vue.createApp({
   }
 });
 
-// Mount the app when the DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
   app.mount('#app');
 });

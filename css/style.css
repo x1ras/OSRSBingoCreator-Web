@@ -110,6 +110,10 @@ main {
   position: absolute;
   width: 4px;
   background-color: var(--completion-color);
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform-origin: center;
 }
 
 .completion-x::before {
@@ -124,6 +128,11 @@ main {
   bottom: 0;
   left: 50%;
   transform: rotate(-45deg) translateX(-50%);
+}
+
+.completion-x-gold::before,
+.completion-x-gold::after {
+  background-color: var(--completion-color-gold);
 }
 
 .modal {
@@ -167,11 +176,22 @@ main {
     gap: 5px;
   }
 }
-/* Additional Bingo Board styles */
+
 .bingo-container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   padding: 0 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bingo-board-wrapper {
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow-x: auto;
 }
 
 .controls-panel {
@@ -184,6 +204,8 @@ main {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
+  width: 100%;
+  max-width: 800px;
 }
 
 .board-size-control {
@@ -203,20 +225,30 @@ main {
   gap: 10px;
 }
 
-.bingo-board-wrapper {
-  overflow-x: auto;
-}
-
 .bingo-board {
+  display: grid;
+  grid-template-columns: 45px repeat(var(--board-size, 5), minmax(66px, 1fr)) 45px;
   border-collapse: collapse;
-  min-width: 100%;
   background-color: white;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   border-radius: 5px;
+  margin: 0 auto;
 }
 
 .board-row {
-  display: flex;
+  display: contents;
+}
+
+.corner-cell, .row-header {
+  width: 45px;
+  min-width: 45px;
+  box-sizing: border-box;
+}
+
+.board-row .total-cell {
+  width: 45px;
+  min-width: 45px;
+  box-sizing: border-box;
 }
 
 .corner-cell {
@@ -227,8 +259,8 @@ main {
 }
 
 .column-header, .row-header {
-  min-width: 45px;
-  min-height: 45px;
+  width: 132px;
+  min-height: 49px;
   padding: 5px;
   background-color: #f9f9f9;
   border: 1px solid var(--border-color);
@@ -238,16 +270,83 @@ main {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  box-sizing:border-box;
+}
+
+.column-header, .bingo-tile {
+  width: auto;
+  box-sizing: border-box;
+}
+
+.header-row .corner-cell:first-child {
+    grid-column: 1;
+}
+
+.header-row .corner-cell:last-child {
+    grid-column: calc(var(--board-size, 5) + 2);
+}
+
+.footer-row .corner-cell:first-child {
+    grid-column: 1;
+}
+
+.footer-row .total-cell {
+    width: auto;
+    min-width: auto;
+}
+
+.row-header {
+  width: 45px;
+  min-height: 44px;
+  padding: 2px;
+  background-color: #f9f9f9;
+  border: 1px solid var(--border-color);
+  font-weight: bold;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.column-header, .row-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  font-size: 13px;
+}
+
+.bonus-input {
+  width: 40px;
+  height: 20px;
+  font-size: 11px;
+  padding: 2px;
+  margin-top: 2px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.bonus-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 2px rgba(76, 175, 80, 0.5);
 }
 
 .bingo-tile {
-  width: 120px;
-  height: 120px;
+  aspect-ratio: 1/1;
+  width: 132px;
+  height: 132px;
   border: 1px solid var(--border-color);
   padding: 5px;
   display: flex;
   flex-direction: column;
   position: relative;
+  box-sizing: border-box;
 }
 
 .tile-title {
@@ -255,9 +354,13 @@ main {
   text-align: center;
   border: none;
   border-bottom: 1px solid #eee;
-  padding: 3px;
-  margin-bottom: 5px;
-  font-size: 14px;
+  padding: 1px;
+  margin-bottom: 1px;
+  font-size: 12px;
+  height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .tile-title.placeholder {
@@ -271,7 +374,7 @@ main {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  margin: 2px 0;
+  margin: 1px 0;
 }
 
 .tile-image {
@@ -297,10 +400,12 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 20px;
+  padding-top: 1px;
 }
 
 .tile-points {
-  width: 40px;
+  width: 35px;
   text-align: center;
   border: 1px solid #ddd;
   border-radius: 3px;
@@ -338,7 +443,6 @@ main {
 }
 
 .total-cell {
-  min-width: 60px;
   background-color: #f9f9f9;
   border: 1px solid var(--border-color);
   padding: 5px;
@@ -352,34 +456,6 @@ main {
   color: #2196F3;
 }
 
-/* Completion X */
-.bingo-tile.completed .tile-image-container::before,
-.bingo-tile.completed .tile-image-container::after {
-  content: '';
-  position: absolute;
-  width: 4px;
-  background-color: var(--completion-color);
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  transform-origin: center;
-}
-
-.bingo-tile.completed .tile-image-container::before {
-  transform: rotate(45deg);
-}
-
-.bingo-tile.completed .tile-image-container::after {
-  transform: rotate(-45deg);
-}
-
-/* Row/column completion */
-.bingo-tile.completed.in-completed-line .tile-image-container::before,
-.bingo-tile.completed.in-completed-line .tile-image-container::after {
-  background-color: var(--completion-color-gold);
-}
-
-/* Image Selector Modal */
 .image-selector {
   display: flex;
   flex-direction: column;
@@ -441,6 +517,47 @@ main {
   max-width: 100%;
 }
 
+.upload-section {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+    .upload-section h3 {
+        font-size: 16px;
+        margin-bottom: 5px;
+        color: #333;
+    }
+
+.file-input {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.file-label {
+    display: inline-block;
+    cursor: pointer;
+    padding: 8px 16px;
+    text-align: center;
+    width: auto;
+}
+
+.upload-status {
+    color: #2196F3;
+    font-style: italic;
+}
+
+.upload-error {
+    color: #FF5252;
+    font-size: 0.9em;
+}
+
 .or-divider {
   text-align: center;
   position: relative;
@@ -477,7 +594,6 @@ main {
   border-radius: 4px;
 }
 
-/* Context Menu */
 .context-menu {
   position: fixed;
   z-index: 1000;
@@ -486,6 +602,8 @@ main {
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   min-width: 200px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .menu-list {
@@ -503,7 +621,24 @@ main {
   background-color: #f5f5f5;
 }
 
-/* Color Picker */
+.menu-section-header {
+  font-weight: bold;
+  color: #666;
+  padding: 8px 15px 2px;
+  border-bottom: 1px solid #eee;
+  margin-top: 5px;
+  font-size: 0.9em;
+  cursor: default;
+}
+
+.menu-section-header:first-child {
+  margin-top: 0;
+}
+
+.menu-list li.menu-section-header:hover {
+  background-color: transparent;
+}
+
 .color-picker {
   display: flex;
   flex-direction: column;
@@ -536,15 +671,35 @@ main {
   margin-top: 10px;
 }
 
-/* Loading spinner */
 .loading-spinner {
   text-align: center;
   padding: 20px;
   color: #666;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+
+  .bingo-board[style*="--board-size: 1"] .bingo-tile {
+    min-height: 60px;
+  }
+
+  .bingo-board[style*="--board-size: 1"] .tile-footer {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .bingo-board[style*="--board-size: 1"] .tile-title {
+    font-size: 10px;
+  }
+
+  .bingo-board {
+    margin: 0 auto;
+  }
+
+  .column-header, .bingo-tile {
+    max-width: 150px;
+  }
+
   .controls-panel {
     flex-direction: column;
   }
@@ -555,13 +710,18 @@ main {
   }
   
   .bingo-tile {
-    width: 100px;
-    height: 100px;
+    width: 110px;
+    height: 110px;
   }
   
   .tile-title {
-    font-size: 12px;
+    font-size: 11px;
+    height: 16px;
   }
+
+  .tile-footer {
+        height: 18px;
+    }
   
   .tile-points {
     width: 30px;
@@ -572,4 +732,22 @@ main {
     width: 20px;
     height: 20px;
   }
+
+  .tile-image-container {
+      min-height: 100px;
+      height: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+    .bingo-tile {
+        min-height: 80px;
+    }
+}
+
+@media (min-width: 768px) {
+    .bingo-board[style*="--board-size: 1"] .bingo-tile,
+    .bingo-board[style*="--board-size: 1"] .column-header {
+        max-width: 88px;
+    }
 }

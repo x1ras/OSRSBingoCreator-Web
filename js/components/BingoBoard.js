@@ -1,14 +1,10 @@
-/**
- * Main BingoBoard Component
- * Displays the full bingo board and handles all board operations
- */
 const BingoBoard = {
-  template: `
+    template: `
     <div class="bingo-container">
       <div class="controls-panel">
         <div class="board-size-control">
           <label for="board-size">Board Size:</label>
-          <input type="number" id="board-size" v-model.number="boardSize" min="3" max="10" class="size-input">
+          <input type="number" id="board-size" v-model.number="boardSize" min="3" max="15" class="size-input">
           <button class="btn create-btn" @click="createBoard">Create Board</button>
         </div>
         <div class="board-actions">
@@ -42,7 +38,11 @@ const BingoBoard = {
             <div v-for="col in boardSize" 
                 :key="'tile-'+row+'-'+col" 
                 class="bingo-tile"
-                :class="{ completed: getTile(row-1, col-1).isCompleted }">
+                :class="{ 
+                  completed: getTile(row-1, col-1).isCompleted,
+                  'in-completed-row': isRowComplete(row-1),
+                  'in-completed-column': isColumnComplete(col-1)
+                }">
               
               <input type="text" 
                 v-model="getTile(row-1, col-1).title" 
@@ -52,24 +52,31 @@ const BingoBoard = {
                 @focus="handleTextFocus"
                 @blur="handleTextBlur">
               
-              <div class="tile-image-container" 
-                  :style="{ backgroundColor: getTile(row-1, col-1).backgroundColorRgb }"
-                  @click="toggleTileCompletion(row-1, col-1)">
-                <img v-if="getTile(row-1, col-1).imageUrl" 
-                    :src="getTile(row-1, col-1).imageUrl" 
-                    class="tile-image" 
-                    @error="handleImageError">
-                    
-                <!-- X mark for completed tiles -->
-                <div v-if="getTile(row-1, col-1).isCompleted" class="completion-x"></div>
-                
-                <!-- Add image button when no image -->
-                <button v-if="!getTile(row-1, col-1).imageUrl" 
-                        @click.stop="openImageSelector(row-1, col-1)" 
-                        class="add-image-btn">
-                  Add Image
-                </button>
-              </div>
+            <div class="tile-image-container"
+                 :style="{ backgroundColor: getTile(row-1, col-1).backgroundColorRgb }">
+              <img v-if="getTile(row-1, col-1).imageUrl"
+                   :src="getTile(row-1, col-1).imageUrl"
+                   class="tile-image"
+                   @click.stop="handleTileImageClick(row-1, col-1)"
+                   @error="handleImageError">
+            
+              <!-- X mark for completed tiles -->
+              <div v-if="getTile(row-1, col-1).isCompleted"
+                   :class="{
+                     'completion-x': true,
+                     'completion-x-gold': isRowComplete(row-1) || isColumnComplete(col-1)
+                   }"></div>
+            
+              <!-- Add image button when no image -->
+              <button v-if="!getTile(row-1, col-1).imageUrl"
+                      @click.stop="openImageSelector(row-1, col-1)"
+                      class="add-image-btn">
+                Add Image
+              </button>
+            </div>
+
+
+
               
               <div class="tile-footer">
                 <input type="number" v-model.number="getTile(row-1, col-1).points" min="0" class="tile-points" @change="updateTotals">
@@ -77,7 +84,7 @@ const BingoBoard = {
                   <button @click.stop="toggleTileCompletion(row-1, col-1)" class="tile-action-btn toggle-btn">
                     {{ getTile(row-1, col-1).isCompleted ? '✓' : '◯' }}
                   </button>
-                  <button @click.stop="showTileMenu(row-1, col-1)" class="tile-action-btn menu-btn">⋮</button>
+                  <button @click.stop="showTileMenu(row-1, col-1, $event)" class="tile-action-btn menu-btn">⋮</button>
                 </div>
               </div>
             </div>
@@ -110,50 +117,78 @@ const BingoBoard = {
         </div>
       </div>
       
-      <!-- Image Selector Modal -->
-      <div v-if="showImageSelector" class="modal">
-        <div class="modal-content image-selector-modal">
-          <span class="modal-close" @click="closeImageSelector">&times;</span>
-          <div class="image-selector">
-            <h2>Select an Image</h2>
-            
-            <div class="search-section">
-              <input type="text" v-model="imageSearchQuery" placeholder="Search OSRS Wiki..." class="search-input" @keyup.enter="searchImages">
-              <button @click="searchImages" class="btn">Search</button>
-            </div>
-            
-            <div v-if="isSearching" class="loading-spinner">Searching...</div>
-            
-            <div v-if="searchResults.length" class="search-results">
-              <div v-for="(result, index) in searchResults" 
-                   :key="'result-'+index" 
-                   class="search-result"
-                   @click="selectImage(result.url)">
-                <img :src="result.url" :alt="result.title" class="result-thumbnail">
-                <div class="result-title">{{ result.title }}</div>
-              </div>
-            </div>
-            
-            <div class="or-divider">OR</div>
-            
-            <div class="url-section">
-              <input type="text" v-model="customImageUrl" placeholder="Enter image URL..." class="url-input">
-              <button @click="useCustomUrl" class="btn">Use URL</button>
-            </div>
-          </div>
-        </div>
-      </div>
+       <!-- Image Selector Modal -->
+       <div v-if="showImageSelector" class="modal">
+         <div class="modal-content image-selector-modal">
+           <span class="modal-close" @click="closeImageSelector">&times;</span>
+           <div class="image-selector">
+             <h2>Select an Image</h2>
+       
+             <!-- File upload section -->
+             <div class="upload-section">
+               <h3>Upload Local Image</h3>
+               <input type="file" id="local-image" @change="handleFileUpload" accept="image/*" class="file-input">
+               <label for="local-image" class="file-label btn">Select Image File</label>
+               <span v-if="uploadingImage" class="upload-status">Uploading...</span>
+               <span v-if="uploadError" class="upload-error">{{ uploadError }}</span>
+             </div>
+       
+             <div class="or-divider">OR</div>
+       
+             <div class="search-section">
+               <input type="text" v-model="imageSearchQuery" placeholder="Search OSRS Wiki..." class="search-input" @keyup.enter="searchImages">
+               <button @click="searchImages" class="btn">Search</button>
+             </div>
+       
+             <div v-if="isSearching" class="loading-spinner">Searching...</div>
+       
+             <div v-if="searchResults.length" class="search-results">
+               <div v-for="(result, index) in searchResults"
+                    :key="'result-'+index"
+                    class="search-result"
+                    @click="selectImage(result.url)">
+                 <img :src="result.url" :alt="result.title" class="result-thumbnail">
+                 <div class="result-title">{{ result.title }}</div>
+               </div>
+             </div>
+       
+             <div class="or-divider">OR</div>
+       
+             <div class="url-section">
+               <input type="text" v-model="customImageUrl" placeholder="Enter image URL..." class="url-input">
+               <button @click="useCustomUrl" class="btn">Use URL</button>
+             </div>
+           </div>
+         </div>
+       </div>
+
       
       <!-- Tile Menu Modal -->
-      <div v-if="showTileMenu" class="context-menu" :style="contextMenuStyle">
+      <div v-if="isTileMenuVisible" class="context-menu" :style="contextMenuStyle">
         <ul class="menu-list">
           <li @click="toggleTileCompletion(currentTileRow, currentTileCol)">
             {{ getTile(currentTileRow, currentTileCol).isCompleted ? 'Mark as Incomplete' : 'Mark as Complete' }}
           </li>
-          <li @click="openImageSelector(currentTileRow, currentTileCol)">Change Image</li>
+          
+          <!-- Image related options -->
+          <li class="menu-section-header">Image</li>
+          <li @click="openImageSelector(currentTileRow, currentTileCol)" v-if="!getTile(currentTileRow, currentTileCol).imageUrl">Add Image</li>
+          <li @click="openImageSelector(currentTileRow, currentTileCol)" v-if="getTile(currentTileRow, currentTileCol).imageUrl">Change Image</li>
+          <li @click="removeTileImage(currentTileRow, currentTileCol)" v-if="getTile(currentTileRow, currentTileCol).imageUrl">Remove Image</li>
+          
+          <!-- Style related options -->
+          <li class="menu-section-header">Style</li>
           <li @click="changeTileColor(currentTileRow, currentTileCol)">Change Background Color</li>
-          <li @click="setBarrowsTile(currentTileRow, currentTileCol)" v-if="getTile(currentTileRow, currentTileCol).title !== 'Barrows Set'">Set as Barrows Tile</li>
+          
+          <!-- Barrows tile specific options -->
+          <li class="menu-section-header">Special Tiles</li>
+          <li @click="toggleBarrowsTile(currentTileRow, currentTileCol)">
+            {{ getTile(currentTileRow, currentTileCol).title === 'Barrows Set' ? 'Convert to Normal Tile' : 'Set as Barrows Tile' }}
+          </li>
           <li @click="openBarrowsTileUI(currentTileRow, currentTileCol)" v-if="getTile(currentTileRow, currentTileCol).title === 'Barrows Set'">Edit Barrows Progress</li>
+          
+          <!-- General options -->
+          <li class="menu-section-header">General</li>
           <li @click="clearTile(currentTileRow, currentTileCol)">Clear Tile</li>
         </ul>
       </div>
@@ -181,682 +216,641 @@ const BingoBoard = {
       </div>
     </div>
   `,
-  
-  components: {
-    'barrows-board': BarrowsBoard
-  },
-  
-  data() {
-    return {
-      // Board configuration
-      boardSize: 5,
-      boardData: null,
-      rowBonuses: [],
-      columnBonuses: [],
-      
-      // Barrows board state
-      showBarrowsBoard: false,
-      currentBarrowsTile: null,
-      currentBarrowsPosition: { row: -1, col: -1 },
-      
-      // Image selector state
-      showImageSelector: false,
-      isSearching: false,
-      imageSearchQuery: '',
-      customImageUrl: '',
-      searchResults: [],
-      currentImageTilePosition: { row: -1, col: -1 },
-      
-      // Tile menu state
-      showTileMenu: false,
-      contextMenuStyle: { top: '0px', left: '0px' },
-      currentTileRow: -1,
-      currentTileCol: -1,
-      
-      // Color picker state
-      showColorPicker: false,
-      selectedColor: '#ffffff',
-      predefinedColors: [
-        'transparent', '#ffffff', '#ffcdd2', '#f8bbd0', '#e1bee7', '#d1c4e9',
-        '#c5cae9', '#bbdefb', '#b3e5fc', '#b2ebf2', '#b2dfdb', '#c8e6c9',
-        '#dcedc8', '#f0f4c3', '#fff9c4', '#ffecb3', '#ffe0b2', '#ffccbc'
-      ]
-    };
-  },
-  
-  created() {
-    // Close context menu on any click outside
-    document.addEventListener('click', this.hideContextMenu);
-    
-    // Try to load board from localStorage on startup
-    this.tryLoadFromLocalStorage();
-  },
-  
-  beforeUnmount() {
-    document.removeEventListener('click', this.hideContextMenu);
-  },
-  
-  methods: {
-    /**
-     * Creates a new bingo board with the specified size
-     */
-    createBoard() {
-      if (this.boardSize < 3 || this.boardSize > 10) {
-        alert("Board size must be between 3 and 10");
-        return;
-      }
-      
-      this.boardData = [];
-      this.rowBonuses = Array(this.boardSize).fill(0);
-      this.columnBonuses = Array(this.boardSize).fill(0);
-      
-      // Initialize the board data
-      for (let row = 0; row < this.boardSize; row++) {
-        this.boardData[row] = [];
-        for (let col = 0; col < this.boardSize; col++) {
-          this.boardData[row][col] = new BingoTile(row, col);
-        }
-      }
+
+    components: {
+        'barrows-board': BarrowsBoard
     },
-    
-    /**
-     * Gets a tile at the specified position with fallback
-     */
-    getTile(row, col) {
-      if (!this.boardData || !this.boardData[row] || !this.boardData[row][col]) {
-        return new BingoTile(row, col);
-      }
-      return this.boardData[row][col];
-    },
-    
-    /**
-     * Clears all data from the current board
-     */
-    clearBoard() {
-      if (!this.boardData) {
-        alert("Create a board first!");
-        return;
-      }
-      
-      if (confirm("Are you sure you want to clear the board?")) {
-        // Reset all tiles but keep board structure
-        for (let row = 0; row < this.boardSize; row++) {
-          for (let col = 0; col < this.boardSize; col++) {
-            const tile = this.boardData[row][col];
-            tile.title = "";
-            tile.points = 0;
-            tile.imageUrl = null;
-            tile.backgroundColorRgb = "transparent";
-            tile.isCompleted = false;
-            tile.completionState = tile.initializeCompletionState();
-          }
-        }
-        
-        // Reset bonuses
-        this.rowBonuses.fill(0);
-        this.columnBonuses.fill(0);
-        
-        // Update totals
-        this.updateTotals();
-      }
-    },
-    
-    /**
-     * Saves the current board to localStorage and offers download
-     */
-    saveBoard() {
-      if (!this.boardData) {
-        alert("Create a board first!");
-        return;
-      }
-      
-      // Create a board state object
-      const boardState = {
-        tiles: this.boardData,
-        rowBonuses: this.rowBonuses,
-        columnBonuses: this.columnBonuses,
-        rows: this.boardSize,
-        columns: this.boardSize
-      };
-      
-      try {
-        // Save to localStorage
-        localStorage.setItem('osrsBingoBoard', JSON.stringify(boardState));
-        
-        // Also provide a download option
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(boardState));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "bingo-board.json");
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
-        
-        alert("Board saved successfully!");
-      } catch (error) {
-        console.error("Error saving board:", error);
-        alert("Error saving board: " + error.message);
-      }
-    },
-    
-    /**
-     * Loads a board from localStorage or file
-     */
-    loadBoard() {
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = '.json';
-      fileInput.onchange = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            try {
-              this.loadBoardFromJson(e.target.result);
-            } catch (error) {
-              console.error("Error parsing board file:", error);
-              alert("Invalid board file");
-            }
-          };
-          reader.readAsText(file);
-        }
-      };
-      fileInput.click();
-    },
-    
-    /**
-     * Try to load board from localStorage on startup
-     */
-    tryLoadFromLocalStorage() {
-      const savedBoard = localStorage.getItem('osrsBingoBoard');
-      if (savedBoard) {
-        try {
-          this.loadBoardFromJson(savedBoard);
-        } catch (error) {
-          console.error("Error loading board from localStorage:", error);
-        }
-      }
-    },
-    
-    /**
-     * Loads a board from JSON data
-     */
-    loadBoardFromJson(jsonData) {
-      const boardState = JSON.parse(jsonData);
-      
-      this.boardSize = boardState.rows;
-      this.rowBonuses = boardState.rowBonuses;
-      this.columnBonuses = boardState.columnBonuses;
-      
-      // Recreate tile objects from plain JSON
-      this.boardData = [];
-      for (let row = 0; row < boardState.rows; row++) {
-        this.boardData[row] = [];
-        for (let col = 0; col < boardState.columns; col++) {
-          const jsonTile = boardState.tiles[row][col];
-          const tile = new BingoTile(row, col);
-          
-          tile.title = jsonTile.title || "";
-          tile.points = jsonTile.points || 0;
-          tile.imageUrl = jsonTile.imageUrl || null;
-          tile.backgroundColorRgb = jsonTile.backgroundColorRgb || "transparent";
-          tile.isCompleted = jsonTile.isCompleted || false;
-          
-          // Handle legacy data without completionState
-          if (jsonTile.completionState) {
-            tile.completionState = jsonTile.completionState;
-          }
-          
-          this.boardData[row][col] = tile;
-        }
-      }
-      
-      // Update totals after loading
-      this.$nextTick(() => {
-        this.updateTotals();
-      });
-    },
-    
-    /**
-     * Convert column number to letter (1 = A, 2 = B, etc)
-     */
-    getColumnLetter(colNumber) {
-      return String.fromCharCode(64 + colNumber);
-    },
-    
-    /**
-     * Calculates the total points for a row including bonus (if complete)
-     */
-    calculateRowTotal(row) {
-      if (!this.boardData) return 0;
-      
-      let total = 0;
-      for (let col = 0; col < this.boardSize; col++) {
-        total += this.getTile(row, col).points || 0;
-      }
-      
-      // Add bonus
-      total += this.rowBonuses[row] || 0;
-      
-      return total;
-    },
-    
-    /**
-     * Calculates the total points for a column including bonus (if complete)
-     */
-    calculateColumnTotal(col) {
-      if (!this.boardData) return 0;
-      
-      let total = 0;
-      for (let row = 0; row < this.boardSize; row++) {
-        total += this.getTile(row, col).points || 0;
-      }
-      
-      // Add bonus
-      total += this.columnBonuses[col] || 0;
-      
-      return total;
-    },
-    
-    /**
-     * Calculates points gained in a row (completed tiles + bonus if all complete)
-     */
-    getRowGainedPoints(row) {
-      if (!this.boardData) return 0;
-      
-      let gained = 0;
-      for (let col = 0; col < this.boardSize; col++) {
-        const tile = this.getTile(row, col);
-        if (tile.isCompleted) {
-          gained += tile.points || 0;
-        }
-      }
-      
-      // Add bonus if row is complete
-      if (this.isRowComplete(row)) {
-        gained += this.rowBonuses[row] || 0;
-      }
-      
-      return gained;
-    },
-    
-    /**
-     * Calculates points gained in a column (completed tiles + bonus if all complete)
-     */
-    getColumnGainedPoints(col) {
-      if (!this.boardData) return 0;
-      
-      let gained = 0;
-      for (let row = 0; row < this.boardSize; row++) {
-        const tile = this.getTile(row, col);
-        if (tile.isCompleted) {
-          gained += tile.points || 0;
-        }
-      }
-      
-      // Add bonus if column is complete
-      if (this.isColumnComplete(col)) {
-        gained += this.columnBonuses[col] || 0;
-      }
-      
-      return gained;
-    },
-    
-    /**
-     * Checks if all tiles in a row are completed
-     */
-    isRowComplete(row) {
-      if (!this.boardData) return false;
-      
-      for (let col = 0; col < this.boardSize; col++) {
-        if (!this.getTile(row, col).isCompleted) {
-          return false;
-        }
-      }
-      
-      return true;
-    },
-    
-    /**
-     * Checks if all tiles in a column are completed
-     */
-    isColumnComplete(col) {
-      if (!this.boardData) return false;
-      
-      for (let row = 0; row < this.boardSize; row++) {
-        if (!this.getTile(row, col).isCompleted) {
-          return false;
-        }
-      }
-      
-      return true;
-    },
-    
-    /**
-     * Toggles the completion state of a tile
-     */
-    toggleTileCompletion(row, col) {
-      const tile = this.getTile(row, col);
-      tile.isCompleted = !tile.isCompleted;
-      
-      // For Barrows tiles, we might want additional logic
-      // ...
-      
-      // Update totals after toggling
-      this.updateTotals();
-      this.hideContextMenu();
-    },
-    
-    /**
-     * Updates all row and column totals
-     */
-    updateTotals() {
-      // Nothing specific needed here as our calculations are reactive
-      // But we could add any additional logic if needed
-    },
-    
-    /**
-     * Initialize the Barrows board completion state
-     */
-    initializeCompletionState() {
-      const state = [];
-      for (let i = 0; i < 4; i++) {
-        state.push(Array(6).fill(false));
-      }
-      return state;
-    },
-    
-    /**
-     * Opens the Barrows board modal for a specific tile
-     */
-    openBarrowsTileUI(row, col) {
-      const tile = this.getTile(row, col);
-      
-      // Only allow opening for Barrows tiles
-      if (tile.title !== 'Barrows Set') {
-        return;
-      }
-      
-      this.currentBarrowsTile = tile;
-      this.currentBarrowsPosition = { row, col };
-      this.showBarrowsBoard = true;
-      this.hideContextMenu();
-    },
-    
-    /**
-     * Closes the Barrows board modal
-     */
-    closeBarrowsBoard() {
-      this.showBarrowsBoard = false;
-      this.currentBarrowsTile = null;
-      this.currentBarrowsPosition = { row: -1, col: -1 };
-    },
-    
-    /**
-     * Handles changes in the Barrows board completion state
-     */
-    handleBarrowsCompletion(data) {
-      if (!this.currentBarrowsTile) return;
-      
-      const { newState, isAnyColumnComplete, completedColumn } = data;
-      
-      // Update the tile's completion state
-      this.currentBarrowsTile.completionState = newState;
-      
-      // If a column is complete, update the main tile
-      if (isAnyColumnComplete) {
-        this.currentBarrowsTile.isCompleted = true;
-        
-        // Update the image to the completed barrows set
-        const barrowsSetImageUrls = {
-          0: "https://oldschool.runescape.wiki/images/Ahrim%27s_robes_equipped_male.png",
-          1: "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png",
-          2: "https://oldschool.runescape.wiki/images/Guthan%27s_armour_equipped_male.png",
-          3: "https://oldschool.runescape.wiki/images/Karil%27s_armour_equipped_male.png",
-          4: "https://oldschool.runescape.wiki/images/Torag%27s_armour_equipped_male.png",
-          5: "https://oldschool.runescape.wiki/images/Verac%27s_armour_equipped_male.png"
+
+    data() {
+        return {
+            boardSize: 5,
+            boardData: null,
+            rowBonuses: [],
+            columnBonuses: [],
+
+            showBarrowsBoard: false,
+            currentBarrowsTile: null,
+            currentBarrowsPosition: { row: -1, col: -1 },
+
+            showImageSelector: false,
+            isSearching: false,
+            imageSearchQuery: '',
+            customImageUrl: '',
+            searchResults: [],
+            currentImageTilePosition: { row: -1, col: -1 },
+
+            isTileMenuVisible: false,
+            contextMenuStyle: { top: '0px', left: '0px' },
+            currentTileRow: -1,
+            currentTileCol: -1,
+
+            showColorPicker: false,
+            selectedColor: '#ffffff',
+            predefinedColors: [
+                'transparent', '#ffffff', '#ffcdd2', '#f8bbd0', '#e1bee7', '#d1c4e9',
+                '#c5cae9', '#bbdefb', '#b3e5fc', '#b2ebf2', '#b2dfdb', '#c8e6c9',
+                '#dcedc8', '#f0f4c3', '#fff9c4', '#ffecb3', '#ffe0b2', '#ffccbc'
+            ],
+
+            uploadingImage: false,
+            uploadError: null,
+            imgurClientId: '6bb52baf522d42f',
         };
-        
-        if (barrowsSetImageUrls[completedColumn]) {
-          this.currentBarrowsTile.imageUrl = barrowsSetImageUrls[completedColumn];
+    },
+
+    created() {
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('.menu-btn') || event.target.closest('.context-menu')) {
+                return;
+            }
+            this.hideContextMenu();
+        });
+
+        this.tryLoadFromLocalStorage();
+    },
+
+    beforeUnmount() {
+        document.removeEventListener('click', this.hideContextMenu);
+    },
+
+    methods: {
+        createBoard() {
+            if (this.boardSize < 3 || this.boardSize > 15) {
+                alert("Board size must be between 3 and 15");
+                return;
+            }
+
+            document.documentElement.style.setProperty('--board-size', this.boardSize);
+
+            this.boardData = [];
+            this.rowBonuses = Array(this.boardSize).fill(0);
+            this.columnBonuses = Array(this.boardSize).fill(0);
+
+            for (let row = 0; row < this.boardSize; row++) {
+                this.boardData[row] = [];
+                for (let col = 0; col < this.boardSize; col++) {
+                    this.boardData[row][col] = new BingoTile(row, col);
+                }
+            }
+        },
+
+        getTile(row, col) {
+            if (!this.boardData || !this.boardData[row] || !this.boardData[row][col]) {
+                return new BingoTile(row, col);
+            }
+            return this.boardData[row][col];
+        },
+
+        clearBoard() {
+            if (!this.boardData) {
+                alert("Create a board first!");
+                return;
+            }
+
+            if (confirm("Are you sure you want to clear the board?")) {
+                for (let row = 0; row < this.boardSize; row++) {
+                    for (let col = 0; col < this.boardSize; col++) {
+                        const tile = this.boardData[row][col];
+                        tile.title = "";
+                        tile.points = 0;
+                        tile.imageUrl = null;
+                        tile.backgroundColorRgb = "transparent";
+                        tile.isCompleted = false;
+                        tile.completionState = tile.initializeCompletionState();
+                    }
+                }
+
+                this.rowBonuses.fill(0);
+                this.columnBonuses.fill(0);
+
+                this.updateTotals();
+            }
+        },
+
+        saveBoard() {
+            if (!this.boardData) {
+                alert("Create a board first!");
+                return;
+            }
+
+            const boardState = {
+                tiles: this.boardData,
+                rowBonuses: this.rowBonuses,
+                columnBonuses: this.columnBonuses,
+                rows: this.boardSize,
+                columns: this.boardSize
+            };
+
+            try {
+                localStorage.setItem('osrsBingoBoard', JSON.stringify(boardState));
+
+                const filename = prompt("Enter a filename for your bingo board:", "bingo-board.json");
+
+                if (filename !== null) {
+                    const jsonString = JSON.stringify(boardState);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename || "bingo-board.json";
+
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    URL.revokeObjectURL(url);
+                }
+            } catch (error) {
+                console.error("Error saving board:", error);
+                alert("Error saving board: " + error.message);
+            }
+        },
+
+        loadBoard() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.onchange = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            this.loadBoardFromJson(e.target.result);
+                        } catch (error) {
+                            console.error("Error parsing board file:", error);
+                            alert("Invalid board file");
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            fileInput.click();
+        },
+
+        tryLoadFromLocalStorage() {
+            const savedBoard = localStorage.getItem('osrsBingoBoard');
+            if (savedBoard) {
+                try {
+                    this.loadBoardFromJson(savedBoard);
+                } catch (error) {
+                    console.error("Error loading board from localStorage:", error);
+                }
+            }
+        },
+
+        loadBoardFromJson(jsonData) {
+            const boardState = JSON.parse(jsonData);
+
+            this.boardSize = boardState.rows;
+            this.rowBonuses = boardState.rowBonuses;
+            this.columnBonuses = boardState.columnBonuses;
+            document.documentElement.style.setProperty('--board-size', this.boardSize);
+
+            this.boardData = [];
+            for (let row = 0; row < boardState.rows; row++) {
+                this.boardData[row] = [];
+                for (let col = 0; col < boardState.columns; col++) {
+                    const jsonTile = boardState.tiles[row][col];
+                    const tile = new BingoTile(row, col);
+
+                    tile.title = jsonTile.title || "";
+                    tile.points = jsonTile.points || 0;
+                    tile.imageUrl = jsonTile.imageUrl || null;
+                    tile.backgroundColorRgb = jsonTile.backgroundColorRgb || "transparent";
+                    tile.isCompleted = jsonTile.isCompleted || false;
+
+                    if (jsonTile.completionState) {
+                        tile.completionState = jsonTile.completionState;
+                    }
+
+                    this.boardData[row][col] = tile;
+                }
+            }
+
+            this.$nextTick(() => {
+                this.updateTotals();
+            });
+        },
+
+        getColumnLetter(colNumber) {
+            return String.fromCharCode(64 + colNumber);
+        },
+
+        calculateRowTotal(row) {
+            if (!this.boardData) return 0;
+
+            let total = 0;
+            for (let col = 0; col < this.boardSize; col++) {
+                total += this.getTile(row, col).points || 0;
+            }
+
+            total += this.rowBonuses[row] || 0;
+
+            return total;
+        },
+
+        calculateColumnTotal(col) {
+            if (!this.boardData) return 0;
+
+            let total = 0;
+            for (let row = 0; row < this.boardSize; row++) {
+                total += this.getTile(row, col).points || 0;
+            }
+
+            total += this.columnBonuses[col] || 0;
+
+            return total;
+        },
+
+        getRowGainedPoints(row) {
+            if (!this.boardData) return 0;
+
+            let gained = 0;
+            for (let col = 0; col < this.boardSize; col++) {
+                const tile = this.getTile(row, col);
+                if (tile.isCompleted) {
+                    gained += tile.points || 0;
+                }
+            }
+
+            if (this.isRowComplete(row)) {
+                gained += this.rowBonuses[row] || 0;
+            }
+
+            return gained;
+        },
+
+        getColumnGainedPoints(col) {
+            if (!this.boardData) return 0;
+
+            let gained = 0;
+            for (let row = 0; row < this.boardSize; row++) {
+                const tile = this.getTile(row, col);
+                if (tile.isCompleted) {
+                    gained += tile.points || 0;
+                }
+            }
+
+            if (this.isColumnComplete(col)) {
+                gained += this.columnBonuses[col] || 0;
+            }
+
+            return gained;
+        },
+
+        isRowComplete(row) {
+            if (!this.boardData) return false;
+
+            for (let col = 0; col < this.boardSize; col++) {
+                if (!this.getTile(row, col).isCompleted) {
+                    return false;
+                }
+            }
+
+            return true;
+        },
+
+        isColumnComplete(col) {
+            if (!this.boardData) return false;
+
+            for (let row = 0; row < this.boardSize; row++) {
+                if (!this.getTile(row, col).isCompleted) {
+                    return false;
+                }
+            }
+
+            return true;
+        },
+
+        toggleTileCompletion(row, col) {
+            const tile = this.getTile(row, col);
+            tile.isCompleted = !tile.isCompleted;
+
+            this.updateTotals();
+            this.hideContextMenu();
+        },
+
+        updateTotals() {
+        },
+
+        initializeCompletionState() {
+            const state = [];
+            for (let i = 0; i < 4; i++) {
+                state.push(Array(6).fill(false));
+            }
+            return state;
+        },
+
+        openBarrowsTileUI(row, col) {
+            const tile = this.getTile(row, col);
+
+            if (tile.title !== 'Barrows Set') {
+                return;
+            }
+
+            this.currentBarrowsTile = tile;
+            this.currentBarrowsPosition = { row, col };
+            this.showBarrowsBoard = true;
+            this.hideContextMenu();
+        },
+
+        closeBarrowsBoard() {
+            this.showBarrowsBoard = false;
+            this.currentBarrowsTile = null;
+            this.currentBarrowsPosition = { row: -1, col: -1 };
+        },
+
+        handleBarrowsCompletion(data) {
+            if (!this.currentBarrowsTile) return;
+
+            const { newState, isAnyColumnComplete, completedColumn } = data;
+
+            this.currentBarrowsTile.completionState = newState;
+
+            if (isAnyColumnComplete) {
+                this.currentBarrowsTile.isCompleted = true;
+
+                const barrowsSetImageUrls = {
+                    0: "https://oldschool.runescape.wiki/images/Ahrim%27s_robes_equipped_male.png",
+                    1: "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png",
+                    2: "https://oldschool.runescape.wiki/images/Guthan%27s_armour_equipped_male.png",
+                    3: "https://oldschool.runescape.wiki/images/Karil%27s_armour_equipped_male.png",
+                    4: "https://oldschool.runescape.wiki/images/Torag%27s_armour_equipped_male.png",
+                    5: "https://oldschool.runescape.wiki/images/Verac%27s_armour_equipped_male.png"
+                };
+
+                if (barrowsSetImageUrls[completedColumn]) {
+                    this.currentBarrowsTile.imageUrl = barrowsSetImageUrls[completedColumn];
+                }
+            } else {
+                this.currentBarrowsTile.isCompleted = false;
+
+                this.currentBarrowsTile.imageUrl = "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png";
+            }
+
+            this.updateTotals();
+        },
+
+        openImageSelector(row, col) {
+            this.currentImageTilePosition = { row, col };
+            this.imageSearchQuery = '';
+            this.customImageUrl = '';
+            this.searchResults = [];
+            this.uploadError = null;
+            this.showImageSelector = true;
+            this.hideContextMenu();
+        },
+
+        closeImageSelector() {
+            this.showImageSelector = false;
+            this.currentImageTilePosition = { row: -1, col: -1 };
+        },
+
+        async searchImages() {
+            if (!this.imageSearchQuery.trim()) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            this.isSearching = true;
+            this.searchResults = [];
+
+            try {
+                const query = encodeURIComponent(this.imageSearchQuery);
+                const url = `https://oldschool.runescape.wiki/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=15&prop=pageimages&piprop=original&format=json&origin=*&gsrnamespace=0`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.query && data.query.pages) {
+                    const results = Object.values(data.query.pages)
+                        .filter(page => page.original && page.original.source)
+                        .map(page => ({
+                            title: page.title,
+                            url: page.original.source
+                        }));
+
+                    this.searchResults = results;
+
+                    if (results.length === 0) {
+                        alert('No images found for your search query');
+                    }
+                } else {
+                    alert('No results found');
+                }
+            } catch (error) {
+                console.error('Error searching for images:', error);
+                alert('Error searching for images. Please try again.');
+            } finally {
+                this.isSearching = false;
+            }
+        },
+
+        selectImage(imageUrl) {
+            const { row, col } = this.currentImageTilePosition;
+            if (row >= 0 && col >= 0) {
+                const tile = this.getTile(row, col);
+                tile.imageUrl = imageUrl;
+                this.closeImageSelector();
+            }
+        },
+
+        useCustomUrl() {
+            if (!this.customImageUrl.trim()) {
+                alert('Please enter an image URL');
+                return;
+            }
+
+            const { row, col } = this.currentImageTilePosition;
+            if (row >= 0 && col >= 0) {
+                const tile = this.getTile(row, col);
+                tile.imageUrl = this.customImageUrl;
+                this.closeImageSelector();
+            }
+        },
+
+        handleImageError(event) {
+            event.target.style.display = 'none';
+            event.target.parentElement.classList.add('image-error');
+
+            const errorSpan = document.createElement('span');
+            errorSpan.className = 'image-error-text';
+            errorSpan.textContent = 'Image could not be loaded';
+            event.target.parentElement.appendChild(errorSpan);
+        },
+
+        showTileMenu(row, col, event) {
+            if (!event) {
+                event = {
+                    clientX: 100,
+                    clientY: 100
+                };
+            }
+
+            this.currentTileRow = row;
+            this.currentTileCol = col;
+
+            this.$nextTick(() => {
+                this.isTileMenuVisible = true;
+
+                const x = event.clientX + 5;
+                const y = event.clientY + 5;
+
+                this.contextMenuStyle = {
+                    top: `${y}px`,
+                    left: `${x}px`,
+                    visibility: 'hidden'
+                };
+
+                this.$nextTick(() => {
+                    const menuEl = document.querySelector('.context-menu');
+                    if (menuEl) {
+                        const menuHeight = menuEl.offsetHeight;
+                        const menuWidth = menuEl.offsetWidth;
+                        const windowHeight = window.innerHeight;
+                        const windowWidth = window.innerWidth;
+
+                        let topPos = y;
+                        if (y + menuHeight > windowHeight) {
+                            topPos = Math.max(10, y - menuHeight);
+                        }
+
+                        let leftPos = x;
+                        if (x + menuWidth > windowWidth) {
+                            leftPos = Math.max(10, x - menuWidth);
+                        }
+
+                        this.contextMenuStyle = {
+                            top: `${topPos}px`,
+                            left: `${leftPos}px`,
+                            visibility: 'visible'
+                        };
+                    }
+                });
+            });
+
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        },
+
+        hideContextMenu() {
+            console.log('Hiding context menu');
+            this.isTileMenuVisible = false;
+        },
+
+        removeTileImage(row, col) {
+            const tile = this.getTile(row, col);
+            tile.imageUrl = null;
+            this.hideContextMenu();
+        },
+
+        toggleBarrowsTile(row, col) {
+            const tile = this.getTile(row, col);
+
+            if (tile.title === "Barrows Set") {
+                tile.title = "";
+                tile.completionState = this.initializeCompletionState();
+            } else {
+                tile.title = "Barrows Set";
+                tile.isCompleted = false;
+                tile.imageUrl = "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png";
+
+                tile.completionState = this.initializeCompletionState();
+            }
+
+            this.hideContextMenu();
+        },
+
+        changeTileColor(row, col) {
+            this.currentTileRow = row;
+            this.currentTileCol = col;
+
+            const tile = this.getTile(row, col);
+            this.selectedColor = tile.backgroundColorRgb === 'transparent' ? '#ffffff' : tile.backgroundColorRgb;
+
+            this.showColorPicker = true;
+            this.hideContextMenu();
+        },
+
+        closeColorPicker() {
+            this.showColorPicker = false;
+        },
+
+        selectColor(color) {
+            const tile = this.getTile(this.currentTileRow, this.currentTileCol);
+            tile.backgroundColorRgb = color;
+            this.closeColorPicker();
+        },
+
+        handleTileImageClick(row, col) {
+            const tile = this.getTile(row, col);
+
+            if (tile.title === 'Barrows Set') {
+                this.openBarrowsTileUI(row, col);
+            }
+        },
+
+        async handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                this.uploadError = 'Selected file is not an image.';
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                this.uploadError = 'Image file size must be less than 10MB.';
+                return;
+            }
+
+            this.uploadingImage = true;
+            this.uploadError = null;
+
+            try {
+                const base64Image = await this.fileToBase64(file);
+
+                const response = await fetch('https://api.imgur.com/3/image', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Client-ID ${this.imgurClientId}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image: base64Image.split(',')[1],
+                        type: 'base64'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.data.error || 'Failed to upload image');
+                }
+
+                this.selectImage(data.data.link);
+
+            } catch (error) {
+                console.error('Error uploading to Imgur:', error);
+                this.uploadError = `Error uploading: ${error.message}`;
+            } finally {
+                this.uploadingImage = false;
+                event.target.value = '';
+            }
+        },
+
+        fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         }
-      } else {
-        this.currentBarrowsTile.isCompleted = false;
-        
-        // Reset to default barrows image if no column is complete
-        this.currentBarrowsTile.imageUrl = "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png";
-      }
-      
-      // Update totals
-      this.updateTotals();
-    },
-    
-    /**
-     * Opens the image selector for a tile
-     */
-    openImageSelector(row, col) {
-      this.currentImageTilePosition = { row, col };
-      this.imageSearchQuery = '';
-      this.customImageUrl = '';
-      this.searchResults = [];
-      this.showImageSelector = true;
-      this.hideContextMenu();
-    },
-    
-    /**
-     * Closes the image selector
-     */
-    closeImageSelector() {
-      this.showImageSelector = false;
-      this.currentImageTilePosition = { row: -1, col: -1 };
-    },
-    
-    /**
-     * Searches for images on the OSRS Wiki
-     */
-    async searchImages() {
-      if (!this.imageSearchQuery.trim()) {
-        alert('Please enter a search query');
-        return;
-      }
-      
-      this.isSearching = true;
-      this.searchResults = [];
-      
-      try {
-        const query = encodeURIComponent(this.imageSearchQuery);
-        const url = `https://oldschool.runescape.wiki/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=15&prop=pageimages&piprop=original&format=json&origin=*&gsrnamespace=0`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.query && data.query.pages) {
-          // Process search results
-          const results = Object.values(data.query.pages)
-            .filter(page => page.original && page.original.source)
-            .map(page => ({
-              title: page.title,
-              url: page.original.source
-            }));
-            
-          this.searchResults = results;
-          
-          if (results.length === 0) {
-            alert('No images found for your search query');
-          }
-        } else {
-          alert('No results found');
-        }
-      } catch (error) {
-        console.error('Error searching for images:', error);
-        alert('Error searching for images. Please try again.');
-      } finally {
-        this.isSearching = false;
-      }
-    },
-    
-    /**
-     * Selects an image from search results for the current tile
-     */
-    selectImage(imageUrl) {
-      const { row, col } = this.currentImageTilePosition;
-      if (row >= 0 && col >= 0) {
-        const tile = this.getTile(row, col);
-        tile.imageUrl = imageUrl;
-        this.closeImageSelector();
-      }
-    },
-    
-    /**
-     * Uses a custom URL entered by the user
-     */
-    useCustomUrl() {
-      if (!this.customImageUrl.trim()) {
-        alert('Please enter an image URL');
-        return;
-      }
-      
-      const { row, col } = this.currentImageTilePosition;
-      if (row >= 0 && col >= 0) {
-        const tile = this.getTile(row, col);
-        tile.imageUrl = this.customImageUrl;
-        this.closeImageSelector();
-      }
-    },
-    
-    /**
-     * Handles image loading errors
-     */
-    handleImageError(event) {
-      event.target.style.display = 'none';
-      event.target.parentElement.classList.add('image-error');
-      
-      // Optionally show a placeholder or error message
-      const errorSpan = document.createElement('span');
-      errorSpan.className = 'image-error-text';
-      errorSpan.textContent = 'Image could not be loaded';
-      event.target.parentElement.appendChild(errorSpan);
-    },
-    
-    /**
-     * Shows the tile context menu
-     */
-    showTileMenu(row, col, event) {
-      // If an event was provided, use it for positioning
-      // Otherwise position near the tile
-      const x = event ? event.clientX : 100;
-      const y = event ? event.clientY : 100;
-      
-      this.contextMenuStyle = {
-        top: `${y}px`,
-        left: `${x}px`
-      };
-      
-      this.currentTileRow = row;
-      this.currentTileCol = col;
-      this.showTileMenu = true;
-      
-      // Prevent default context menu
-      if (event) {
-        event.preventDefault();
-      }
-    },
-    
-    /**
-     * Hides the context menu
-     */
-    hideContextMenu() {
-      this.showTileMenu = false;
-    },
-    
-    /**
-     * Sets a tile as a Barrows tile
-     */
-    setBarrowsTile(row, col) {
-      const tile = this.getTile(row, col);
-      
-      tile.title = "Barrows Set";
-      tile.isCompleted = false;
-      tile.imageUrl = "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png";
-      
-      // Initialize completionState if needed
-      if (!tile.completionState) {
-        tile.completionState = this.initializeCompletionState();
-      }
-      
-      this.hideContextMenu();
-    },
-    
-    /**
-     * Opens the color picker for changing tile background
-     */
-    changeTileColor(row, col) {
-      this.currentTileRow = row;
-      this.currentTileCol = col;
-      
-      // Initialize with current color
-      const tile = this.getTile(row, col);
-      this.selectedColor = tile.backgroundColorRgb === 'transparent' ? '#ffffff' : tile.backgroundColorRgb;
-      
-      this.showColorPicker = true;
-      this.hideContextMenu();
-    },
-    
-    /**
-     * Closes the color picker
-     */
-    closeColorPicker() {
-      this.showColorPicker = false;
-    },
-    
-    /**
-     * Selects a color from the color picker
-     */
-    selectColor(color) {
-      const tile = this.getTile(this.currentTileRow, this.currentTileCol);
-      tile.backgroundColorRgb = color;
-      this.closeColorPicker();
-    },
-    
-    /**
-     * Clears all data from a tile
-     */
-    clearTile(row, col) {
-      const tile = this.getTile(row, col);
-      
-      tile.title = "";
-      tile.points = 0;
-      tile.imageUrl = null;
-      tile.backgroundColorRgb = "transparent";
-      tile.isCompleted = false;
-      
-      // Only reset completionState for non-Barrows tiles
-      // For Barrows tiles, this should be handled separately
-      if (tile.title !== "Barrows Set") {
-        tile.completionState = this.initializeCompletionState();
-      }
-      
-      this.hideContextMenu();
-      this.updateTotals();
-    },
-    
-    /**
-     * Handles text input focus - removes placeholder if needed
-     */
-    handleTextFocus(event) {
-      if (event.target.classList.contains('placeholder')) {
-        event.target.value = '';
-        event.target.classList.remove('placeholder');
-      }
-    },
-    
-    /**
-     * Handles text input blur - adds placeholder if empty
-     */
-    handleTextBlur(event) {
-      if (event.target.value === '') {
-        event.target.classList.add('placeholder');
-      }
     }
-  }
-};
+
+}
