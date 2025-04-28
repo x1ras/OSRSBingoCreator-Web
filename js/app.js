@@ -12,7 +12,7 @@ const app = Vue.createApp({
       
       <footer class="app-footer">
         <p>Created by x1ras for OSRS players</p>
-        <p><small>Not affiliated with Jagex or Old School RuneScape</small></p>
+        <p><small>Not affiliated with Jagex</small></p>
       </footer>
     </div>
   `,
