@@ -15,6 +15,7 @@
             </div>
             <button v-if="!isAdmin" class="btn admin-unlock-btn" @click="showAdminLogin = true">Admin Unlock</button>
             <button v-else class="btn admin-lock-btn" @click="isAdmin = false">Lock</button>
+            <button v-if="canSaveBoard()" class="btn save-progress-btn" @click="saveProgress">Save Progress</button>
           </div>
         </div>
         <div class="progress-summary">
@@ -553,6 +554,63 @@
                 localStorage.setItem('osrsBingoPlayer', JSON.stringify(boardState));
             } catch (error) {
                 console.error("Error saving player progress:", error);
+            }
+        },
+
+        canSaveBoard() {
+            return !this.adminOnlyCompletion || this.isAdmin;
+        },
+
+        async saveProgress() {
+            if (!this.canSaveBoard()) {
+                alert("You need admin access to save changes to this board.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/get-board/${this.boardCode}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to get original board data');
+                }
+
+                const originalBoard = await response.json();
+
+                const updatedBoard = { ...originalBoard };
+
+                if (updatedBoard.tiles && this.boardData) {
+                    for (let row = 0; row < this.boardSize; row++) {
+                        for (let col = 0; col < this.boardSize; col++) {
+                            if (updatedBoard.tiles[row] && updatedBoard.tiles[row][col] &&
+                                this.boardData[row] && this.boardData[row][col]) {
+                                updatedBoard.tiles[row][col].isCompleted = this.boardData[row][col].isCompleted;
+
+                                if (this.boardData[row][col].completionState) {
+                                    updatedBoard.tiles[row][col].completionState = this.boardData[row][col].completionState;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const saveResponse = await fetch('/api/save-board', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: this.boardCode,
+                        boardData: updatedBoard
+                    })
+                });
+
+                if (!saveResponse.ok) {
+                    throw new Error('Failed to save board');
+                }
+
+                alert("Your progress has been saved!");
+
+            } catch (error) {
+                console.error("Error saving progress:", error);
+                alert("There was an error saving your progress. Please try again.");
             }
         }
     }

@@ -1155,6 +1155,15 @@ main {
     pointer-events: none;
 }
 
+.save-progress-btn {
+    margin-left: 10px;
+    background-color: #4CAF50;
+}
+
+    .save-progress-btn:hover {
+        background-color: #3e8e41;
+    }
+
 /******************************************************************
     Code Display Modal Styles 
 ******************************************************************/
