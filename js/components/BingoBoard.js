@@ -31,8 +31,8 @@ const BingoBoard = {
         </div>
         <div class="board-actions">
           <button class="btn" @click="clearBoard">Clear Board</button>
-          <button class="btn" @click="saveBoard">Save Board</button>
-          <button class="btn" @click="loadBoard">Load Board</button>
+          <button class="btn" @click="saveBoard">Save To File</button>
+          <button class="btn" @click="loadBoard">Load From File</button>
           <button class="btn" @click="showBoardCode">Generate Code</button>
         </div>
       </div>

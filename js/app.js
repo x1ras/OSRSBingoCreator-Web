@@ -140,6 +140,22 @@ const app = Vue.createApp({
         <p>Created by x1ras for OSRS players</p>
         <p><small>Not affiliated with Jagex</small></p>
       </footer>
+      
+      <!-- Admin Login Modal for editing protected boards -->
+      <div v-if="showAdminLogin" class="modal">
+        <div class="modal-content admin-login-modal">
+          <span class="modal-close" @click="showAdminLogin = false">&times;</span>
+          <h2>Admin Authentication</h2>
+          <p>This board is password protected. Please enter the password:</p>
+          <div class="admin-login-form">
+            <input type="password" v-model="adminPassword" placeholder="Enter admin password" class="password-input">
+            <div class="login-actions">
+              <button class="btn cancel-btn" @click="showAdminLogin = false">Cancel</button>
+              <button class="btn submit-btn" @click="submitAdminLogin">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 
@@ -147,7 +163,9 @@ const app = Vue.createApp({
         return {
             currentView: 'landing',
             currentBoardCode: '',
-            loadedBoardData: null
+            loadedBoardData: null,
+            showAdminLogin: false,
+            adminPassword: ''
         }
     },
 
@@ -178,7 +196,6 @@ const app = Vue.createApp({
 
                 if (boardData) {
                     this.loadedBoardData = JSON.parse(boardData);
-
                     this.currentBoardCode = code;
                 } else {
                     alert("Board not found with that code");
@@ -191,31 +208,46 @@ const app = Vue.createApp({
 
         editLoadedBoard() {
             if (this.loadedBoardData.passwordProtected) {
-                const password = prompt("This board is password protected. Please enter the password:");
-                
-                if (!password) return;
-                
-                const hash = this.hashPassword(password);
-                if (hash !== this.loadedBoardData.passwordHash) {
-                    alert("Incorrect password");
-                    return;
-                }
+                this.showAdminLogin = true;
+            } else {
+                this.loadBoardIntoCreator();
             }
-            
+        },
+
+        submitAdminLogin() {
+            if (this.adminPassword) {
+                const hash = this.hashPassword(this.adminPassword);
+
+                if (hash === this.loadedBoardData.passwordHash) {
+                    this.showAdminLogin = false;
+                    this.adminPassword = '';
+                    this.loadBoardIntoCreator();
+                } else {
+                    alert("Incorrect password");
+                }
+            } else {
+                alert("Please enter a password");
+            }
+        },
+
+        loadBoardIntoCreator() {
             this.currentView = 'creator';
-            
+
             this.$nextTick(() => {
                 const bingoBoard = this.$refs.bingoBoard;
                 if (bingoBoard && this.loadedBoardData) {
                     bingoBoard.boardName = this.loadedBoardData.boardName || "Untitled Board";
                     bingoBoard.usePassword = this.loadedBoardData.passwordProtected || false;
                     bingoBoard.adminOnlyCompletion = this.loadedBoardData.adminOnlyCompletion || false;
-                    
-                    
+
+                    if (bingoBoard.usePassword && this.loadedBoardData.passwordHash) {
+                        bingoBoard.boardPassword = this.adminPassword;
+                    }
+
                     bingoBoard.boardSize = this.loadedBoardData.rows;
                     bingoBoard.rowBonuses = this.loadedBoardData.rowBonuses;
                     bingoBoard.columnBonuses = this.loadedBoardData.columnBonuses;
-                    
+
                     bingoBoard.boardData = this.loadedBoardData.tiles;
                     document.documentElement.style.setProperty('--board-size', this.loadedBoardData.rows);
                 }
