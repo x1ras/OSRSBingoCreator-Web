@@ -429,7 +429,7 @@
 
             if (tile.title === 'Barrows Set') {
                 this.openBarrowsBoard(row, col);
-            } else if (adminOnlyCompletion && !isAdmin) {
+            } else if (this.adminOnlyCompletion && !this.isAdmin) {
                 return;
             } else {
                 this.toggleTileCompletion(row, col);
@@ -568,13 +568,16 @@
             }
 
             try {
+                console.log("Saving progress for board code:", this.boardCode);
+
                 const response = await fetch(`/api/get-board/${this.boardCode}`);
 
                 if (!response.ok) {
-                    throw new Error('Failed to get original board data');
+                    throw new Error(`Failed to get original board data: ${response.status}`);
                 }
 
                 const originalBoard = await response.json();
+                console.log("Original board loaded:", originalBoard);
 
                 const updatedBoard = { ...originalBoard };
 
@@ -593,6 +596,8 @@
                     }
                 }
 
+                console.log("Sending updated board data");
+
                 const saveResponse = await fetch('/api/save-board', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -603,7 +608,8 @@
                 });
 
                 if (!saveResponse.ok) {
-                    throw new Error('Failed to save board');
+                    const errorData = await saveResponse.json();
+                    throw new Error(`Failed to save board: ${saveResponse.status}, ${JSON.stringify(errorData)}`);
                 }
 
                 alert("Your progress has been saved!");
