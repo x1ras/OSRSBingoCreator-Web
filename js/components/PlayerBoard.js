@@ -184,28 +184,26 @@
 
         async loadBoardFromCode(code) {
             try {
-                const response = await fetch(`/api/get-board/${code}`);
-
-                if (response.ok) {
-                    const boardData = await response.json();
-                    this.loadBoardFromJson(JSON.stringify(boardData));
-                } else {
-                    const boardData = localStorage.getItem('bingoboard_' + code);
-                    if (boardData) {
-                        this.loadBoardFromJson(boardData);
-                    } else {
-                        throw new Error("Board not found");
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading board:", error);
-
                 const boardData = localStorage.getItem('bingoboard_' + code);
                 if (boardData) {
                     this.loadBoardFromJson(boardData);
-                } else {
-                    alert("Invalid board code or board not found");
+                    return;
                 }
+
+                if (!window.location.hostname.includes('github.io')) {
+                    const response = await fetch(`/api/get-board/${code}`);
+                    if (response.ok) {
+                        const boardData = await response.json();
+                        this.loadBoardFromJson(JSON.stringify(boardData));
+                        return;
+                    }
+                }
+
+                throw new Error("Board not found");
+
+            } catch (error) {
+                console.error("Error loading board:", error);
+                alert("Invalid board code or board not found");
             }
         },
 
@@ -570,14 +568,13 @@
             try {
                 console.log("Saving progress for board code:", this.boardCode);
 
-                const response = await fetch(`/api/get-board/${this.boardCode}`);
-
-                if (!response.ok) {
-                    throw new Error(`Failed to get original board data: ${response.status}`);
+                const boardData = localStorage.getItem('bingoboard_' + this.boardCode);
+                if (!boardData) {
+                    throw new Error("Could not find original board data");
                 }
 
-                const originalBoard = await response.json();
-                console.log("Original board loaded:", originalBoard);
+                const originalBoard = JSON.parse(boardData);
+                console.log("Original board loaded from localStorage");
 
                 const updatedBoard = { ...originalBoard };
 
@@ -596,21 +593,10 @@
                     }
                 }
 
-                console.log("Sending updated board data");
+                localStorage.setItem('bingoboard_' + this.boardCode, JSON.stringify(updatedBoard));
+                console.log("Progress saved to localStorage");
 
-                const saveResponse = await fetch('/api/save-board', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        code: this.boardCode,
-                        boardData: updatedBoard
-                    })
-                });
-
-                if (!saveResponse.ok) {
-                    const errorData = await saveResponse.json();
-                    throw new Error(`Failed to save board: ${saveResponse.status}, ${JSON.stringify(errorData)}`);
-                }
+                this.saveBoardToLocalStorage();
 
                 alert("Your progress has been saved!");
 
