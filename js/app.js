@@ -130,7 +130,7 @@ const app = Vue.createApp({
                      @load-board="loadBoardWithCode"
                      @edit-loaded-board="editLoadedBoard"
                      @play-loaded-board="playLoadedBoard"></landing-page>
-        <bingo-board v-else-if="currentView === 'creator'" ref="bingoBoard"></bingo-board>
+        <bingo-board v-else-if="currentView === 'creator'" ref="bingoBoard":existing-code="currentBoardCode"></bingo-board>
         <player-board v-else-if="currentView === 'player'" 
                      ref="playerBoard"
                      :board-code="currentBoardCode"></player-board>
@@ -250,6 +250,7 @@ const app = Vue.createApp({
 
                     bingoBoard.boardData = this.loadedBoardData.tiles;
                     document.documentElement.style.setProperty('--board-size', this.loadedBoardData.rows);
+                    bingoBoard.existingBoardCode = this.currentBoardCode;
                 }
             });
         },

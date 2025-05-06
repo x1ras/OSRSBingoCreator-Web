@@ -2,38 +2,51 @@ const BingoBoard = {
     template: `
     <div class="bingo-container">
       <div class="controls-panel">
-        <div class="board-size-control">
-          <label for="board-size">Board Size:</label>
-          <input type="number" id="board-size" v-model.number="boardSize" min="3" max="15" class="size-input">
-          <button class="btn create-btn" @click="createBoard">Create Board</button>
-        </div>
-        <div class="board-name-control">
-          <label for="board-name">Board Name:</label>
-          <input type="text" id="board-name" v-model="boardName" placeholder="Enter board name" class="name-input">
-        </div>
-        <!-- Password Protection Options -->
-        <div class="password-controls">
-          <div class="password-option">
-            <div class="option-label">
-              <input type="checkbox" id="enable-password" v-model="usePassword">
-              <label for="enable-password">Password protect this board</label>
-            </div>
-            <input v-if="usePassword" type="password" v-model="boardPassword" placeholder="Set board password" class="password-input">
+        <!-- First row: Board size (left), Creation buttons (center), Board name (right) -->
+        <div class="controls-top-row">
+          <div class="board-size-section">
+            <label for="board-size">Board Size:</label>
+            <input type="number" id="board-size" v-model.number="boardSize" min="3" max="15" class="size-input">
           </div>
           
-          <div v-if="usePassword" class="password-option protection-options">
-            <div class="option-label">
-              <input type="checkbox" id="admin-completion" v-model="adminOnlyCompletion">
-              <label for="admin-completion">Admin only tile completion</label>
-              <div class="option-help">Players will need this password to mark tiles as complete</div>
+          <div class="board-creation-buttons">
+            <button class="btn create-btn" @click="createBoard">Create Board</button>
+            <button class="btn clear-btn" @click="clearBoard">Clear Board</button>
+          </div>
+          
+          <div class="board-name-section">
+            <label for="board-name">Board Name:</label>
+            <input type="text" id="board-name" v-model="boardName" placeholder="Enter board name" class="name-input">
+          </div>
+        </div>
+        
+        <!-- Second row: Password controls only, aligned below board name -->
+        <div class="password-row">
+          <div class="password-controls">
+            <div class="password-option">
+              <div class="option-label">
+                <label for="enable-password">Password protect this board</label>
+                <input type="checkbox" id="enable-password" v-model="usePassword">
+              </div>
+              <input v-if="usePassword" type="password" v-model="boardPassword" placeholder="Set board password" class="password-input name-input">
+            </div>
+            
+            <div v-if="usePassword" class="password-option">
+              <div class="option-label">
+                <label for="admin-completion">Admin only tile completion</label>
+                <input type="checkbox" id="admin-completion" v-model="adminOnlyCompletion">
+              </div>
+              <div class="option-help">The board will need to be unlocked to mark tiles as complete</div>
             </div>
           </div>
         </div>
-        <div class="board-actions">
-          <button class="btn" @click="clearBoard">Clear Board</button>
-          <button class="btn" @click="saveBoard">Save To File</button>
-          <button class="btn" @click="loadBoard">Load From File</button>
-          <button class="btn" @click="showBoardCode">Generate Code</button>
+        
+        <!-- Third row: File actions centered -->
+        <div class="file-actions-row">
+          <div class="file-actions">
+            <button class="btn" @click="loadBoard">Load From File</button>
+            <button class="btn" @click="showSaveOptions">Save...</button>
+          </div>
         </div>
       </div>
       
@@ -71,9 +84,7 @@ const BingoBoard = {
                 v-model="getTile(row-1, col-1).title" 
                 class="tile-title" 
                 :class="{ placeholder: !getTile(row-1, col-1).title }"
-                placeholder="Enter Title"
-                @focus="handleTextFocus"
-                @blur="handleTextBlur">
+                placeholder="Enter Title">
               
             <div class="tile-image-container"
                  :style="{ backgroundColor: getTile(row-1, col-1).backgroundColorRgb }">
@@ -97,9 +108,6 @@ const BingoBoard = {
                 Add Image
               </button>
             </div>
-
-
-
               
               <div class="tile-footer">
                 <input type="number" v-model.number="getTile(row-1, col-1).points" min="0" class="tile-points" @change="updateTotals">
@@ -185,7 +193,6 @@ const BingoBoard = {
          </div>
        </div>
 
-      
       <!-- Tile Menu Modal -->
       <div v-if="isTileMenuVisible" class="context-menu" :style="contextMenuStyle">
         <ul class="menu-list">
@@ -237,6 +244,37 @@ const BingoBoard = {
           </div>
         </div>
       </div>
+
+      <!-- Save Options Modal -->
+      <div v-if="showSaveModal" class="modal">
+        <div class="modal-content save-modal">
+          <span class="modal-close" @click="closeSaveModal">&times;</span>
+          <div class="save-options">
+            <h2>Save Options</h2>
+            <div class="save-options-list">
+              <button class="btn save-option-btn" @click="saveToFile">
+                <span class="save-option-icon">📄</span>
+                <span class="save-option-text">Save to File</span>
+              </button>
+      
+              <button class="btn save-option-btn"
+                      @click="saveToExistingCode"
+                      :disabled="!existingBoardCode"
+                      :class="{'disabled-btn': !existingBoardCode}">
+                <span class="save-option-icon">🔄</span>
+                <span class="save-option-text">Update Existing Code</span>
+                <span v-if="existingBoardCode" class="save-option-detail">{{ existingBoardCode }}</span>
+                <span v-else class="save-option-disabled">No existing code</span>
+              </button>
+      
+              <button class="btn save-option-btn" @click="saveToNewCode">
+                <span class="save-option-icon">✨</span>
+                <span class="save-option-text">Generate New Code</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 
@@ -244,8 +282,16 @@ const BingoBoard = {
         'barrows-board': BarrowsBoard
     },
 
+    props: {
+        existingCode: {
+            type: String,
+            default: ''
+        }
+    },
+
     data() {
         return {
+            showSaveModal: false,
             boardName: "Untitled Board",
             boardPassword: "",
             usePassword: false,
@@ -254,6 +300,7 @@ const BingoBoard = {
             boardData: null,
             rowBonuses: [],
             columnBonuses: [],
+            existingBoardCode: '',
 
             showBarrowsBoard: false,
             currentBarrowsTile: null,
@@ -293,6 +340,10 @@ const BingoBoard = {
             this.hideContextMenu();
         });
 
+        if (this.existingCode) {
+            this.existingBoardCode = this.existingCode;
+        }
+
         this.tryLoadFromLocalStorage();
     },
 
@@ -300,7 +351,87 @@ const BingoBoard = {
         document.removeEventListener('click', this.hideContextMenu);
     },
 
+    watch: {
+        existingCode: {
+            immediate: true,
+            handler(newVal) {
+                if (newVal) {
+                    this.existingBoardCode = newVal;
+                }
+            }
+        }
+    },
+
     methods: {
+        showSaveOptions() {
+            if (!this.boardData) {
+                alert("Create a board first!");
+                return;
+            }
+            this.showSaveModal = true;
+        },
+
+        closeSaveModal() {
+            this.showSaveModal = false;
+        },
+
+        saveToFile() {
+            this.closeSaveModal();
+            if (!this.boardData) {
+                alert("Create a board first!");
+                return;
+            }
+
+            const boardState = {
+                tiles: this.boardData,
+                rowBonuses: this.rowBonuses,
+                columnBonuses: this.columnBonuses,
+                rows: this.boardSize,
+                columns: this.boardSize
+            };
+
+            try {
+                localStorage.setItem('osrsBingoBoard', JSON.stringify(boardState));
+
+                const filename = prompt("Enter a filename for your bingo board:", "bingo-board.json");
+
+                if (filename !== null) {
+                    const jsonString = JSON.stringify(boardState);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename || "bingo-board.json";
+
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    URL.revokeObjectURL(url);
+                }
+            } catch (error) {
+                console.error("Error saving board:", error);
+                alert("Error saving board: " + error.message);
+            }
+        },
+
+        saveToExistingCode() {
+            if (!this.existingBoardCode) {
+                alert("No existing code to update!");
+                return;
+            }
+
+            this.closeSaveModal();
+            this.showBoardCode();
+        },
+
+        saveToNewCode() {
+            this.existingBoardCode = '';
+            this.closeSaveModal();
+            this.showBoardCode();
+        },
+
         createBoard() {
             if (this.boardSize < 3 || this.boardSize > 15) {
                 alert("Board size must be between 3 and 15");
@@ -351,46 +482,6 @@ const BingoBoard = {
                 this.columnBonuses.fill(0);
 
                 this.updateTotals();
-            }
-        },
-
-        saveBoard() {
-            if (!this.boardData) {
-                alert("Create a board first!");
-                return;
-            }
-
-            const boardState = {
-                tiles: this.boardData,
-                rowBonuses: this.rowBonuses,
-                columnBonuses: this.columnBonuses,
-                rows: this.boardSize,
-                columns: this.boardSize
-            };
-
-            try {
-                localStorage.setItem('osrsBingoBoard', JSON.stringify(boardState));
-
-                const filename = prompt("Enter a filename for your bingo board:", "bingo-board.json");
-
-                if (filename !== null) {
-                    const jsonString = JSON.stringify(boardState);
-                    const blob = new Blob([jsonString], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = url;
-                    downloadLink.download = filename || "bingo-board.json";
-
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-
-                    URL.revokeObjectURL(url);
-                }
-            } catch (error) {
-                console.error("Error saving board:", error);
-                alert("Error saving board: " + error.message);
             }
         },
 
@@ -560,6 +651,8 @@ const BingoBoard = {
         },
 
         updateTotals() {
+            // This method is called in multiple places but doesn't contain any code
+            // It's kept as a placeholder for potential future functionality
         },
 
         initializeCompletionState() {
@@ -765,7 +858,6 @@ const BingoBoard = {
         },
 
         hideContextMenu() {
-            console.log('Hiding context menu');
             this.isTileMenuVisible = false;
         },
 
@@ -785,7 +877,6 @@ const BingoBoard = {
                 tile.title = "Barrows Set";
                 tile.isCompleted = false;
                 tile.imageUrl = "https://oldschool.runescape.wiki/images/Dharok%27s_armour_equipped_male.png";
-
                 tile.completionState = this.initializeCompletionState();
             }
 
@@ -903,23 +994,26 @@ const BingoBoard = {
             if (this.usePassword && this.boardPassword) {
                 const passwordHash = this.hashPassword(this.boardPassword);
                 boardState.passwordHash = passwordHash;
-
                 boardState.adminOnlyCompletion = this.adminOnlyCompletion;
             } else {
                 boardState.adminOnlyCompletion = false;
             }
 
-            const generateId = () => {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                let result = '';
-                for (let i = 0; i < 12; i++) {
-                    result += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                return result;
-            };
+            let shortCode = this.existingBoardCode;
 
-            const timestamp = Date.now().toString(36);
-            const shortCode = generateId() + timestamp.slice(-6);
+            if (!shortCode) {
+                const generateId = () => {
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    let result = '';
+                    for (let i = 0; i < 12; i++) {
+                        result += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    return result;
+                };
+
+                const timestamp = Date.now().toString(36);
+                shortCode = generateId() + timestamp.slice(-6);
+            }
 
             try {
                 const response = await fetch('/api/save-board', {
@@ -948,7 +1042,6 @@ const BingoBoard = {
             }
         },
 
-
         async showBoardCode() {
             try {
                 const code = await this.generateBoardCode();
@@ -957,11 +1050,15 @@ const BingoBoard = {
                     modalDiv.className = 'modal';
                     modalDiv.style.display = 'block';
 
+                    const isUpdating = this.existingBoardCode === code;
+
                     modalDiv.innerHTML = `
                 <div class="modal-content code-modal">
                     <span class="modal-close">&times;</span>
-                    <h2>Board Code</h2>
-                    <p>Share this code with players:</p>
+                    <h2>${isUpdating ? 'Board Updated' : 'Board Code'}</h2>
+                    <p>${isUpdating
+                            ? 'The board has been updated with the same code:'
+                            : 'Share this code with players:'}</p>
                     <div class="code-display-container">
                         <input type="text" value="${code}" class="code-display" readonly>
                         <button class="btn copy-btn">Copy</button>
@@ -1002,6 +1099,17 @@ const BingoBoard = {
                 hash = hash & hash;
             }
             return hash.toString();
+        },
+
+        clearTile(row, col) {
+            const tile = this.getTile(row, col);
+            tile.title = "";
+            tile.points = 0;
+            tile.imageUrl = null;
+            tile.backgroundColorRgb = "transparent";
+            tile.isCompleted = false;
+            tile.completionState = this.initializeCompletionState();
+            this.hideContextMenu();
         }
     }
-}
+};

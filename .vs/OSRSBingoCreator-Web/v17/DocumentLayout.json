@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\app.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:js\\app.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\PlayerBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:js\\components\\PlayerBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\BingoBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:js\\components\\BingoBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\app.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:js\\app.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\PlayerBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:js\\components\\PlayerBoard.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\netlify\\functions\\save-board.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
@@ -46,7 +46,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 8,
           "Children": [
             {
               "$type": "Document",
@@ -110,7 +110,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "PlayerBoard.js",
               "DocumentMoniker": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\PlayerBoard.js",
               "RelativeDocumentMoniker": "js\\components\\PlayerBoard.js",
@@ -118,43 +118,42 @@
               "RelativeToolTip": "js\\components\\PlayerBoard.js",
               "ViewState": "AgIAAGQBAAAAAAAAAAAYwLkAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2025-04-28T19:04:37.183Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-28T19:04:37.183Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "app.js",
               "DocumentMoniker": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\app.js",
               "RelativeDocumentMoniker": "js\\app.js",
               "ToolTip": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\app.js",
               "RelativeToolTip": "js\\app.js",
-              "ViewState": "AgIAANkAAAAAAAAAAAAowPEAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAANgAAAAAAAAAAAAAAPwAAABJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2025-04-27T19:59:35.985Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-27T19:59:35.985Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "style.css",
               "DocumentMoniker": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\css\\style.css",
               "RelativeDocumentMoniker": "css\\style.css",
               "ToolTip": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\css\\style.css",
               "RelativeToolTip": "css\\style.css",
-              "ViewState": "AgIAAGIEAAAAAAAAAAAAAIwEAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAH0FAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-04-27T19:35:31.385Z"
+              "WhenOpened": "2025-04-27T19:35:31.385Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "BingoBoard.js",
               "DocumentMoniker": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\BingoBoard.js",
               "RelativeDocumentMoniker": "js\\components\\BingoBoard.js",
               "ToolTip": "C:\\Users\\Jon\\source\\repos\\OSRSBingoCreator-Web\\js\\components\\BingoBoard.js",
               "RelativeToolTip": "js\\components\\BingoBoard.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAA/AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFsEAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
               "WhenOpened": "2025-04-27T19:31:27.646Z",
               "EditorCaption": ""
